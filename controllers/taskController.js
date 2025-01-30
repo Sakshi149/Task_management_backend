@@ -30,45 +30,50 @@ const db = require("../config/db")
 const getTasks = async (req, res) => {
     try {
         const id = req.query.id || null;
-        const page = parseInt(req.query.page) || 0;  
+        const page = parseInt(req.query.page) || 1;  
         const limit = parseInt(req.query.limit) || 10;  
         const offset = (page - 1) * limit;
         
         let query = `SELECT * FROM tasks`;
+        let countQuery = `SELECT COUNT (*) AS count FROM tasks`;
         let whereClause = '';
         let params = [];
 
         if(id) {
-            whereClause += ` id=?`;
+            whereClause += `WHERE id=?`;
             params.push(id);
         }
 
-        if(whereClause){
-            query = query + ' WHERE ' + whereClause;
+        // if(whereClause){
+        //     query = query + ' WHERE ' + whereClause;
+        // }
+
+        if(!id){
+        query += whereClause + ` LIMIT ? OFFSET ?`;
+        params.push(limit, offset);
         }
 
         console.log('query=', query, 'params=', params);
 
-        const [result] = await db.execute(
-            query,
-            params
-        );
+        const [result] = await db.execute(query + whereClause, params);
 
-        // console.log('task=', result)
+        let totalTasks = 1;
+        let totalPages = 1;
 
-        // const totalTasks = await db.query(`SELECT COUNT(*) AS count FROM tasks`);
-        // const totalPages = Math.ceil(totalTasks[0].count / limit);
+        if(!id){
+        const [totalTasksResult] = await db.execute(countQuery + whereClause, params.slice(0, whereClause ? 1 : undefined)); 
+        totalTasks = totalTasksResult[0].count;
+        totalPages = Math.ceil(totalTasks / limit);
+    }
 
         res.status(200).send({
             success: true,
             tasks: result,
-            // pagination: {
-            //     page: page,
-            //     limit: limit,
-            //     totalPages: totalPages,
-            //     totalTasks: totalTasks[0].count
-            // }
+            pagination: id
+                ? undefined
+                : { page, limit, totalPages, totalTasks }
         });
+        
     } catch (error) {
         console.log("ERROR encountered", error.message);
         res.status(500).send({
