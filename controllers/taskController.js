@@ -13,7 +13,7 @@ const getTasks = async (req, res) => {
         let countQuery = `SELECT COUNT(*) AS count FROM tasks`;
         let whereClauses = [];
         let params = [];
-        let { from, to, status } = req.query;
+        let { from, to, status, title } = req.query;
 
         if (from && to) {
             whereClauses.push(`created_at BETWEEN ? AND ?`);
@@ -38,10 +38,16 @@ const getTasks = async (req, res) => {
             params.push(id);
         }
 
+        if(title){
+            whereClauses.push(`title LIKE ?`)
+            params.push(`%${title}%`)
+        }
+
         let whereClause = whereClauses.length ? ` WHERE ` + whereClauses.join(' AND ') : '';
 
         query += whereClause;
         countQuery += whereClause;
+
 
         if (!id) {
             query += ` LIMIT ? OFFSET ?`;
@@ -76,6 +82,8 @@ const getTasks = async (req, res) => {
         });
     }
 };
+
+
 
 // GET TASKS BY ID
 const getTaskByID = async (req, res) => {
