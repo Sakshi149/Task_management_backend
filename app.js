@@ -1,7 +1,8 @@
-const express = require('express')
-const morgan = require('morgan')
-const dotenv = require('dotenv');
-const mySqlPool = require('./config/db');
+import express from 'express';
+import morgan from 'morgan';
+import dotenv from 'dotenv';
+import mySqlPool from './config/db.js'; 
+import taskRoutes from './routes/taskRoutes.js';
 
 // Configure dotenv
 dotenv.config();
@@ -14,11 +15,7 @@ app.use(morgan('dev'))
 app.use(express.json())
 
 // routes
-app.use('/api/v1/task', require("./routes/taskRoutes"))
-
-app.get('/tasks', (req, res) => {
-    res.status(200).send('<h1>Nodejs Mysql App</h1>')
-})
+app.use('/api/v1/task', taskRoutes)
 
 // port
 const port = process.env.port || 8000
@@ -34,3 +31,5 @@ mySqlPool.query('SELECT 1').then(() => {
 }).catch((error) => {
     console.log(error)
 })
+
+export default app

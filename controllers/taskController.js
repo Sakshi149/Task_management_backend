@@ -1,8 +1,10 @@
-const db = require("../config/db")
+// const db = require("../config/db")
+
+import {mySqlPool} from "../config/db.js"
 
 // Pagination, date and status filter
 // Get all task list
-const getTasks = async (req, res) => {
+export const getTasks = async (req, res) => {
     try {
         const id = req.query.id || null;
         const page = parseInt(req.query.page) || 1;
@@ -56,13 +58,13 @@ const getTasks = async (req, res) => {
 
         console.log('Query:', query, 'Params:', params);
 
-        const [result] = await db.execute(query, params);
+        const [result] = await mySqlPool.execute(query, params);
         
         let totalTasks = 1;
         let totalPages = 1;
 
         if (!id) {
-            const [totalTasksResult] = await db.execute(countQuery, params.slice(0, params.length - 2));
+            const [totalTasksResult] = await mySqlPool.execute(countQuery, params.slice(0, params.length - 2));
             totalTasks = totalTasksResult[0].count;
             totalPages = Math.ceil(totalTasks / limit);
         }
@@ -84,32 +86,31 @@ const getTasks = async (req, res) => {
 };
 
 
-
 // GET TASKS BY ID
-const getTaskByID = async (req, res) => {
+export const getTaskByID = async (req, res) => {
     try {
         const taskId = req.params.id
         if (!taskId) {
-            return res.status(404).send({
+            return res.status(404).json({
                 success: false,
                 message: 'Invalid or Provide task id'
             })
         }
-        // const data = await db.query(`SELECT * FROM tasks where id=` +taskId)
-        const data = await db.query(`SELECT * FROM tasks WHERE id=?`, [taskId])
-        if (!data) {
-            return res.status(404).send({
+        // const data = await mySqlPool.query(`SELECT * FROM tasks where id=` +taskId)
+        const data = await mySqlPool.query(`SELECT * FROM tasks WHERE id=?`, [taskId])
+        if (!data ) {
+            return res.status(404).json({
                 success: false,
                 message: 'No records found'
             })
         }
-        res.status(200).send({
+        res.status(200).json({
             success: true,
             taskDetails: data[0],
         })
     } catch (error) {
         console.log(error)
-        res.status(500).send({
+        res.status(500).json({
             success: false,
             message: 'Error in get task id in task api',
             error
@@ -119,7 +120,7 @@ const getTaskByID = async (req, res) => {
 
 // To add single task at a time
 // CREATE TASK
-const createTask = async (req, res) => {
+export const createTask = async (req, res) => {
     try {
         console.log('body=', JSON.stringify(req.body));
 
@@ -130,16 +131,22 @@ const createTask = async (req, res) => {
                 message: 'Please provide all fields: title, description, and status'
             });
         }
-        const data = await db.query(`INSERT INTO tasks (title, description, status) VALUES(?, ?, ?)`, [title, description, status]);
+        const data = await mySqlPool.query(`INSERT INTO tasks (title, description, status) VALUES(?, ?, ?)`, [title, description, status]);
         if (!data) {
             return res.status(500).send({
                 success: false,
                 message: 'Error in insert query'
             });
         }
-        res.status(200).send({
+        res.status(201).send({
             success: true,
             message: 'New task added successfully',
+            task: {
+                id: result.insertId,
+                title,
+                description,
+                status
+            }
         });
 
     } catch (error) {
@@ -149,11 +156,12 @@ const createTask = async (req, res) => {
             message: 'Error in creating task API',
             error
         });
+    
     }
 }
 
 // Update task
-const updateTask = async (req, res) => {
+export const updateTask = async (req, res) => {
     try {
         const taskId = req.params.id 
         if(!taskId){
@@ -163,7 +171,7 @@ const updateTask = async (req, res) => {
             })
         }
         const {title, description, status} = req.body
-        const data = await db.query(`UPDATE tasks SET title = ?, description = ?, status = ? WHERE id = ?`, [title, description, status, taskId])
+        const data = await mySqlPool.query(`UPDATE tasks SET title = ?, description = ?, status = ? WHERE id = ?`, [title, description, status, taskId])
         if(!data){
             return res.status(500).send({
                 success: false,
@@ -186,7 +194,7 @@ const updateTask = async (req, res) => {
 }
 
 // DELETE TASK
-const deleteTask = async (req, res) => {
+export const deleteTask = async (req, res) => {
     try {
         const taskId = req.params.id 
         if(!taskId){
@@ -195,7 +203,7 @@ const deleteTask = async (req, res) => {
                 message: 'Please provide task Id or valid task id',
             })
         }
-        await db.query(`DELETE FROM tasks WHERE id = ?`, [taskId])
+        await mySqlPool.query(`DELETE FROM tasks WHERE id = ?`, [taskId])
         res.status(200).send({
             success: true,
             message: 'Task deleted successfully'
@@ -211,4 +219,4 @@ const deleteTask = async (req, res) => {
     }
 }
 
-module.exports = {getTasks, getTaskByID, createTask, updateTask, deleteTask}
+// module.exports = {getTasks, getTaskByID, createTask, updateTask, deleteTask}
