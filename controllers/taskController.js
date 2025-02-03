@@ -85,38 +85,73 @@ export const getTasks = async (req, res) => {
     }
 };
 
-
 // GET TASKS BY ID
+// export const getTaskByID = async (req, res) => {
+//     try {
+//         const taskId = req.params.id
+//         if (!taskId) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: 'Invalid or Provide task id'
+//             })
+//         }
+//         // const data = await mySqlPool.query(`SELECT * FROM tasks where id=` +taskId)
+//         const data = await mySqlPool.query(`SELECT * FROM tasks WHERE id=?`, [taskId])
+//         if (!data || data.length == 0) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: 'No records found'
+//             })
+//         }
+//         res.status(200).json({
+//             success: true,
+//             taskDetails: data[0],
+//         })
+//     } catch (error) {
+//         console.log(error)
+//         res.status(500).json({
+//             success: false,
+//             message: 'Error in get task id in task api',
+//             error
+//         })
+//     }
+// }
+
 export const getTaskByID = async (req, res) => {
     try {
-        const taskId = req.params.id
-        if (!taskId) {
+        const taskId = Number(req.params.id);
+
+        if (isNaN(taskId) || taskId <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or missing task ID',
+            });
+        }
+
+        const [data] = await mySqlPool.query(`SELECT * FROM tasks WHERE id = ?`, [taskId]);
+
+        if (!data || data.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'Invalid or Provide task id'
-            })
+                message: 'Task not found',
+            });
         }
-        // const data = await mySqlPool.query(`SELECT * FROM tasks where id=` +taskId)
-        const data = await mySqlPool.query(`SELECT * FROM tasks WHERE id=?`, [taskId])
-        if (!data ) {
-            return res.status(404).json({
-                success: false,
-                message: 'No records found'
-            })
-        }
+
         res.status(200).json({
             success: true,
-            taskDetails: data[0],
-        })
+            taskDetails: data[0], 
+        });
+
     } catch (error) {
-        console.log(error)
+        console.error(error);
         res.status(500).json({
             success: false,
-            message: 'Error in get task id in task api',
-            error
-        })
+            message: 'Error retrieving task',
+            error,
+        });
     }
-}
+};
+
 
 // To add single task at a time
 // CREATE TASK
@@ -138,15 +173,13 @@ export const createTask = async (req, res) => {
                 message: 'Error in insert query'
             });
         }
-        res.status(201).send({
+
+        const [result, error] = data;
+
+        res.status(200).send({
             success: true,
             message: 'New task added successfully',
-            task: {
-                id: result.insertId,
-                title,
-                description,
-                status
-            }
+            task_id: result.insertId
         });
 
     } catch (error) {
@@ -163,60 +196,74 @@ export const createTask = async (req, res) => {
 // Update task
 export const updateTask = async (req, res) => {
     try {
-        const taskId = req.params.id 
-        if(!taskId){
-            return res.status(404).send({
-                success: false,
-                message: 'Invalid ID or provide Id'
-            })
+        const taskId = parseInt(req.params.id, 10);
+        if (isNaN(taskId) || taskId <= 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Invalid task ID' 
+            });
         }
-        const {title, description, status} = req.body
-        const data = await mySqlPool.query(`UPDATE tasks SET title = ?, description = ?, status = ? WHERE id = ?`, [title, description, status, taskId])
-        if(!data){
-            return res.status(500).send({
-                success: false,
-                message: 'Error in update data'
-            })
-        }
-        res.status(200).send({
-            success: true,
-            message: 'Tasks details updated'
-        })
-    } catch (error) {
-        console.log(error)
-        res.status(500).send({
-            success: false,
-            message: 'Error in update Api',
-            error
-        })
-        
-    }
-}
 
-// DELETE TASK
+        const { title, description, status } = req.body;
+
+        const [updateResult] = await mySqlPool.query(
+            `UPDATE tasks SET title = ?, description = ?, status = ? WHERE id = ?`,
+            [title, description, status, taskId]
+        );
+
+        if (updateResult.affectedRows === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Task not found' 
+            });
+        }
+
+        return res.status(200).json({ 
+            success: true, 
+            message: 'Task details updated' });
+    } catch (error) {
+        console.error('Update Task Error:', error.message);
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Error updating task' 
+        });
+    }
+};
+
 export const deleteTask = async (req, res) => {
     try {
-        const taskId = req.params.id 
-        if(!taskId){
+        const taskId = req.params.id;
+
+        if (!taskId) {
+            return res.status(400).send({
+                success: false,
+                message: 'Please provide a valid task ID',
+            });
+        }
+
+        const [rows] = await mySqlPool.query(`SELECT id FROM tasks WHERE id = ?`, [taskId]);
+
+        if (rows.length == 0) {
             return res.status(404).send({
                 success: false,
-                message: 'Please provide task Id or valid task id',
-            })
+                message: 'Task not found',
+            });
         }
-        await mySqlPool.query(`DELETE FROM tasks WHERE id = ?`, [taskId])
-        res.status(200).send({
+
+        await mySqlPool.query(`DELETE FROM tasks WHERE id = ? LIMIT 1`, [taskId]);
+
+        return res.status(200).send({
             success: true,
-            message: 'Task deleted successfully'
-        })
+            message: 'Task deleted successfully',
+        });
     } catch (error) {
-        console.log(error)
-        res.status(500).send({
+        console.error(error);
+        return res.status(500).send({
             success: false,
-            message: 'Error in delete task api',
-            error
-        })
-        
+            message: 'Error deleting task',
+            error,
+        });
     }
-}
+};
 
 // module.exports = {getTasks, getTaskByID, createTask, updateTask, deleteTask}

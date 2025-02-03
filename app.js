@@ -15,7 +15,7 @@ app.use(morgan('dev'))
 app.use(express.json())
 
 // routes
-app.use('/api/v1/task', taskRoutes)
+app.use('/api/v1/tasks', taskRoutes)
 
 // port
 const port = process.env.port || 8000
