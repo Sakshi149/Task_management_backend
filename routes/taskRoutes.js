@@ -22,6 +22,6 @@ router.put('/:id', updateTask)
 router.delete('/:id', deleteTask)
 
 // GET LIST && ID || GET
-router.get('/:id?', getTasks, getTaskByID)
+// router.get('/:id?', getTasks, getTaskByID)
 
 export default router

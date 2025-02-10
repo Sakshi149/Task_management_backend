@@ -7,6 +7,7 @@ chai.use(chaiHttp);
 const { expect } = chai;
 
 let server;
+let task_id = null;
 
 before((done) => {
   server = app.listen(5000, () => {
@@ -22,7 +23,6 @@ after((done) => {
   });
 });
 
-let task_id = null;
 
 describe('POST /api/v1/tasks', () => {
   it('should create a new task and return 200 status', async () => {

@@ -1,6 +1,6 @@
 // const db = require("../config/db")
 
-import {mySqlPool} from "../config/db.js"
+import { mySqlPool } from "../config/db.js"
 
 // Pagination, date and status filter
 // Get all task list
@@ -10,12 +10,12 @@ export const getTasks = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
-        
+
         let query = `SELECT * FROM tasks`;
         let countQuery = `SELECT COUNT(*) AS count FROM tasks`;
         let whereClauses = [];
         let params = [];
-        let { from, to, status, title } = req.query;
+        let { from, to, status, title, q } = req.query;
 
         if (from && to) {
             whereClauses.push(`created_at BETWEEN ? AND ?`);
@@ -40,9 +40,14 @@ export const getTasks = async (req, res) => {
             params.push(id);
         }
 
-        if(title){
+        if (title) {
             whereClauses.push(`title LIKE ?`)
             params.push(`%${title}%`)
+        }
+        if (q) {
+            whereClauses.push(`title LIKE ? OR description LIKE ?`)
+            params.push(`%${q}%`)
+            params.push(`%${q}%`)
         }
 
         let whereClause = whereClauses.length ? ` WHERE ` + whereClauses.join(' AND ') : '';
@@ -59,7 +64,7 @@ export const getTasks = async (req, res) => {
         console.log('Query:', query, 'Params:', params);
 
         const [result] = await mySqlPool.execute(query, params);
-        
+
         let totalTasks = 1;
         let totalPages = 1;
 
@@ -139,7 +144,7 @@ export const getTaskByID = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            taskDetails: data[0], 
+            taskDetails: data[0],
         });
 
     } catch (error) {
@@ -189,7 +194,7 @@ export const createTask = async (req, res) => {
             message: 'Error in creating task API',
             error
         });
-    
+
     }
 }
 
@@ -198,9 +203,9 @@ export const updateTask = async (req, res) => {
     try {
         const taskId = parseInt(req.params.id, 10);
         if (isNaN(taskId) || taskId <= 0) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Invalid task ID' 
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid task ID'
             });
         }
 
@@ -212,20 +217,21 @@ export const updateTask = async (req, res) => {
         );
 
         if (updateResult.affectedRows === 0) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Task not found' 
+            return res.status(404).json({
+                success: false,
+                message: 'Task not found'
             });
         }
 
-        return res.status(200).json({ 
-            success: true, 
-            message: 'Task details updated' });
+        return res.status(200).json({
+            success: true,
+            message: 'Task details updated'
+        });
     } catch (error) {
         console.error('Update Task Error:', error.message);
-        return res.status(500).json({ 
-            success: false, 
-            message: 'Error updating task' 
+        return res.status(500).json({
+            success: false,
+            message: 'Error updating task'
         });
     }
 };
