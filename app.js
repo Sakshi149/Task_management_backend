@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import mySqlPool from './config/db.js'; 
 import taskRoutes from './routes/taskRoutes.js';
+import authRoutes from './routes/authRoutes.js'
 
 // Configure dotenv
 dotenv.config();
@@ -18,6 +19,7 @@ app.use(cors());
 
 // routes
 app.use('/api/v1/tasks', taskRoutes);
+app.use('/auth', authRoutes);
 
 // port
 const port = process.env.PORT || 8000;
