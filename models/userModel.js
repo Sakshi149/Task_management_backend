@@ -21,11 +21,13 @@ export const createUser = async (userData) => {
       [first_name, middle_name, last_name, dob, gender, address, email, password]
     );
     const userId = result.insertId;
-
+    
     await connection.execute(
       `INSERT INTO login (user_id, email, password) VALUES (?, ?, ?)`,
       [userId, email, password]
     );
+
+    console.log(`User with ID ${userId} created and login record inserted.`);
 
     await connection.commit();
     return { userId };
@@ -35,6 +37,50 @@ export const createUser = async (userData) => {
   } finally {
     connection.release();
   }
+};
+
+export const storeRefreshToken = async (userId, token) => {
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 7);
+
+  // await mySqlPool.execute(
+  //   'DELETE FROM refresh_tokens WHERE user_id = ?',
+  //   [userId]
+  // );
+
+  await mySqlPool.execute(
+    'UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = ?',
+    [userId]
+  );
+
+  const [rows] = await mySqlPool.execute(
+    'SELECT id FROM login WHERE user_id = ?',
+    [userId]
+  );
+
+  if (rows.length === 0) {
+    throw new Error('User does not exist in the login table');
+  }
+
+  await mySqlPool.execute(
+    'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
+    [userId, token, expiresAt]
+  );
+};
+
+export const getRefreshToken = async (token) => {
+  const [rows] = await mySqlPool.execute(
+    'SELECT * FROM refresh_tokens WHERE token = ? AND revoked = FALSE AND expires_at > NOW()',
+    [token]
+  );
+  return rows.length ? rows[0] : null;
+};
+
+export const revokeRefreshToken = async (token) => {
+  await mySqlPool.execute(
+    'UPDATE refresh_tokens SET revoked = TRUE WHERE token = ?',
+    [token]
+  );
 };
 
 export const updateUserPassword = async (email, hashedPassword) => {
